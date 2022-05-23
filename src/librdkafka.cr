@@ -11,7 +11,7 @@ lib LibRdKafka
     RD_KAFKA_CONF_OK = 0
   end
 
-  enum KafkaResErr
+  enum KafkaRespErr
     RD_KAFKA_RESP_ERR__BEGIN = -200
     RD_KAFKA_RESP_ERR__BAD_MSG = -199
     RD_KAFKA_RESP_ERR__BAD_COMPRESSION = -198
@@ -177,31 +177,83 @@ lib LibRdKafka
     RD_KAFKA_RESP_ERR_END_ALL
   end
 
+  enum KafkaVType
+    RD_KAFKA_VTYPE_END
+    RD_KAFKA_VTYPE_TOPIC
+    RD_KAFKA_VTYPE_RKT
+    RD_KAFKA_VTYPE_PARTITION
+    RD_KAFKA_VTYPE_VALUE
+    RD_KAFKA_VTYPE_KEY
+    RD_KAFKA_VTYPE_OPAQUE
+    RD_KAFKA_VTYPE_MSGFLAGS
+    RD_KAFKA_VTYPE_TIMESTAMP
+    RD_KAFKA_VTYPE_HEADER
+    RD_KAFKA_VTYPE_HEADERS
+  end
+
+  struct KafkaVuMem
+    ptr : Void*
+    size : LibC::SizeT
+  end
+
+  struct KafkaVuHeader
+    name : LibC::Char*
+    val : Void*
+    size : LibC::SizeT
+  end
+
+  union KafkaVuValue
+    cstr : LibC::Char*
+    rkt : Void* # TODO
+    i : LibC::Int
+    i32 : LibC::Int32T
+    i64 : LibC::Int64T
+    mem : KafkaVuMem
+    header : KafkaVuHeader
+    headers : Void*
+    ptr : UInt8*
+    pad : StaticArray(LibC::Char, 64)
+  end
+
+  struct KafkaVu
+    vtype : KafkaVType
+    u : KafkaVuValue
+  end
+
+  struct KafkaDelivery
+    pending : UInt8
+    response : LibC::Int
+    partition : LibC::Int
+    offset : LibC::Int64T
+  end
+
+  RD_KAFKA_MSG_F_COPY = 0x2
+
   type Kafka = Void*
   type KafkaConf = Void*
   type KafkaTopicConf = Void*
   type KafkaTopic = Void*
 
   struct KafkaMessage
-    err : KafkaResErr
-    rkt : KafkaTopic
-    partition : Int32
-    payload : Void*
+    err : KafkaRespErr
+    rkt : Void*
+    partition : LibC::Int32T
+    payload : UInt8*
     len : LibC::SizeT
-    key : Void*
+    key : UInt8*
     key_len : LibC::SizeT
-    offset : Int64
+    offset : LibC::Int64T
     _private : Void*
   end
 
   struct KafkaTopicPartition
-    topic : LibC::Char
+    topic : LibC::Char*
     partition : Int32
     offset : Int64
-    metadata : Void*
+    metadata : UInt8*
     metadata_size : LibC::SizeT
     opaque : Void*
-    err : KafkaResErr
+    err : KafkaRespErr
     _private : Void*
   end
 
@@ -214,7 +266,8 @@ lib LibRdKafka
   fun rd_kafka_conf_new() : KafkaConf
   fun rd_kafka_conf_destroy(conf : KafkaConf)
   fun rd_kafka_conf_set(conf : KafkaConf, name : LibC::Char*, value : LibC::Char*, errstr : LibC::Char*, errstr_size : LibC::SizeT) : KafkaConfRes
-  fun rd_kafka_conf_set_dr_msg_cb(conf : KafkaConf, dr_msg_cb : (Kafka, KafkaMessage*, Void*) ->)
+  fun rd_kafka_conf_set_dr_msg_cb(conf : KafkaConf, dr_msg_cb : Proc(Kafka, KafkaMessage*, Void*, Nil))
+  fun rd_kafka_conf_set_error_cb(conf : KafkaConf, error_cb : (Kafka, LibC::Int, LibC::Char*, Void*) ->)
 
   fun rd_kafka_new(type : KafkaType, conf : KafkaConf, errstr : LibC::Char*, errstr_size : LibC::SizeT) : Kafka
   fun rd_kafka_destroy(rk : Kafka)
@@ -223,14 +276,25 @@ lib LibRdKafka
   fun rd_kafka_topic_conf_new() : KafkaTopicConf
   fun rd_kafka_topic_conf_set(conf : KafkaTopicConf, name : LibC::Char*, value : LibC::Char*, errstr : LibC::Char*, errstr_size : LibC::SizeT) : KafkaConfRes
 
-  fun rd_kafka_produce(rkt : KafkaTopic, partition : Int32, msgflags : LibC::Int, payload : Void*, len : LibC::SizeT, key : Void*, keylen : LibC::SizeT, msg_opaque : Void*)
+  fun rd_kafka_produce(rkt : KafkaTopic, partition : Int32, msgflags : LibC::Int, payload : Void*, len : LibC::SizeT, key : Void*, keylen : LibC::SizeT, msg_opaque : Void*) : LibC::Int
+  fun rd_kafka_producev(rk : Kafka, ...) : KafkaRespErr
+  fun rd_kafka_producea(rk : Kafka, vus : KafkaVu*, cnt : LibC::SizeT) : Void*
 
   fun rd_kafka_poll_set_consumer(rk : Kafka)
+  fun rd_kafka_poll(rk : Kafka, timeout_ms : LibC::Int) : LibC::Int
+  fun rd_kafka_outq_len(rk : Kafka) : LibC::Int
 
   fun rd_kafka_topic_partition_list_new(size : LibC::Int) : KafkaTopicPartitionList*
   fun rd_kafka_topic_partition_list_add(rktparlist : KafkaTopicPartitionList*, topic : LibC::Char*, partition : Int32) : KafkaTopicPartition*
+  fun rd_kafka_topic_partition_list_destroy(rktparlist : KafkaTopicPartitionList*)
 
-  fun rd_kafka_subscribe(rk : Kafka, topics : KafkaTopicPartitionList*) : KafkaResErr
+  fun rd_kafka_subscribe(rk : Kafka, topics : KafkaTopicPartitionList*) : KafkaRespErr
   fun rd_kafka_consumer_poll(rk : Kafka, timeout_ms : LibC::Int) : KafkaMessage*
   fun rd_kafka_message_destroy(rkm : KafkaMessage*)
+  fun rd_kafka_flush(rk : Kafka, timeout_ms : LibC::Int)
+
+  fun rd_kafka_last_error() : KafkaRespErr
+
+  fun rd_kafka_version : LibC::Int
+  fun rd_kafka_version_str : LibC::Char*
 end
