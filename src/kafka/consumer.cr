@@ -4,6 +4,7 @@ require "./message"
 module Kafka
   class Consumer
     private property instance : Kafka::Instance
+    private property config : Kafka::Config
     private property? closing : Bool
 
     def initialize(@config : Kafka::Config)
@@ -69,6 +70,55 @@ module Kafka
           else
             next
           end
+        end
+      end
+    end
+
+    def store_offset(message)
+      native_topic = LibRdKafka.rd_kafka_topic_new(instance, message.topic, nil)
+
+      response = LibRdKafka.rd_kafka_offset_store(
+        native_topic,
+        message.partition,
+        message.offset
+      )
+
+      if response != LibRdKafka::KafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR
+        raise "Error storing offset"
+      end
+    ensure
+      if native_topic && !native_topic.null?
+        LibRdKafka.rd_kafka_topic_destroy(native_topic)
+      end
+    end
+
+    def each_batch(size : Int32, timeout_ms : Int32)
+      raise "Invalid configuration" unless config.values["enable.auto.offset.store"]? == "false"
+
+      messages = Array(Kafka::Message).new(size)
+      start_time = Time.monotonic
+
+      loop do
+        break if closing?
+
+        begin
+          message = poll(5000)
+          messages << message if message
+        rescue e
+          yield messages.dup if messages.any?
+          raise e
+        end
+
+        now = Time.monotonic
+        duration = now - start_time
+
+        if messages.size > size || duration.total_milliseconds >= timeout_ms
+          if messages.any?
+            yield messages.dup
+            messages.clear
+          end
+
+          start_time = now
         end
       end
     end

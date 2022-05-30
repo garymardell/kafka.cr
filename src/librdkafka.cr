@@ -236,7 +236,7 @@ lib LibRdKafka
 
   struct KafkaMessage
     err : KafkaRespErr
-    rkt : Void*
+    rkt : KafkaTopic
     partition : LibC::Int32T
     payload : UInt8*
     len : LibC::SizeT
@@ -273,6 +273,8 @@ lib LibRdKafka
   fun rd_kafka_destroy(rk : Kafka)
 
   fun rd_kafka_topic_new(rk : Kafka, topic : LibC::Char*, conf : KafkaTopicConf) : KafkaTopic
+  fun rd_kafka_topic_name(rk : KafkaTopic) : LibC::Char*
+  fun rd_kafka_topic_destroy(rk : KafkaTopic)
   fun rd_kafka_topic_conf_new() : KafkaTopicConf
   fun rd_kafka_topic_conf_set(conf : KafkaTopicConf, name : LibC::Char*, value : LibC::Char*, errstr : LibC::Char*, errstr_size : LibC::SizeT) : KafkaConfRes
 
@@ -292,6 +294,8 @@ lib LibRdKafka
   fun rd_kafka_consumer_poll(rk : Kafka, timeout_ms : LibC::Int) : KafkaMessage*
   fun rd_kafka_message_destroy(rkm : KafkaMessage*)
   fun rd_kafka_flush(rk : Kafka, timeout_ms : LibC::Int)
+
+  fun rd_kafka_offset_store(rkt : KafkaTopic, partition : Int32, offset : Int64) : KafkaRespErr
 
   fun rd_kafka_last_error() : KafkaRespErr
 

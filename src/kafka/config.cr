@@ -1,5 +1,7 @@
 module Kafka
   class Config
+    property values : Hash(String, String)
+
     def initialize(@values : Hash(String, String))
       @native_config = LibRdKafka.rd_kafka_conf_new()
 
