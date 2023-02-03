@@ -37,14 +37,14 @@ module Kafka
       end
     end
 
-    def produce(topic : String, payload : String, key : String = "")
+    def produce(topic : String, payload : String, key : String = "", partition : Int32 = -1)
       raise "Producer is shutting down" if closing?
 
       native_topic = LibRdKafka.rd_kafka_topic_new(instance, topic, nil)
 
       handle = Kafka::DeliveryHandle.new
 
-      LibRdKafka.rd_kafka_produce(native_topic, -1, LibRdKafka::RD_KAFKA_MSG_F_COPY, payload, payload.bytesize, key, key.bytesize, Box.box(handle))
+      LibRdKafka.rd_kafka_produce(native_topic, partition, LibRdKafka::RD_KAFKA_MSG_F_COPY, payload, payload.bytesize, key, key.bytesize, Box.box(handle))
 
       handle
     ensure
