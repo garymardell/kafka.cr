@@ -25,8 +25,9 @@ module Kafka
 
       spawn do
         loop do
-          LibRdKafka.rd_kafka_poll(instance, 250)
-          Fiber.yield
+          LibRdKafka.rd_kafka_poll(instance, 0)
+
+          sleep 0.25
 
           if @shutdown.closed? && LibRdKafka.rd_kafka_outq_len(instance) == 0
             @signal.send(true)
