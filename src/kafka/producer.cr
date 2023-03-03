@@ -12,7 +12,10 @@ module Kafka
         native_message = message.value
 
         handle = Box(Kafka::DeliveryHandle).unbox(native_message._private)
-        handle.pending = false
+        handle.mark_done
+
+        DeliveryHandle.registry.delete(handle)
+
         nil
       }
 
@@ -44,9 +47,15 @@ module Kafka
 
       handle = Kafka::DeliveryHandle.new
 
+      # Register the handle so it does not get gc'd
+      DeliveryHandle.registry << handle
+
       LibRdKafka.rd_kafka_produce(native_topic, partition, LibRdKafka::RD_KAFKA_MSG_F_COPY, payload, payload.bytesize, key, key.bytesize, Box.box(handle))
 
       handle
+    rescue e
+      DeliveryHandle.registry.delete(handle) if handle
+      raise e
     ensure
       if native_topic && !native_topic.null?
         LibRdKafka.rd_kafka_topic_destroy(native_topic)
