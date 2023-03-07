@@ -80,7 +80,7 @@ module Kafka
         native_message = message_ptr.value
 
         if native_message.err != LibRdKafka::KafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR
-          raise "Error consuming messages"
+          raise Kafka::Error.new(native_message.err)
         end
 
         Kafka::Message.new(native_message)
@@ -116,7 +116,7 @@ module Kafka
       )
 
       if response != LibRdKafka::KafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR
-        raise "Error storing offset"
+        raise Kafka::Error.new(response)
       end
     ensure
       if native_topic && !native_topic.null?
@@ -139,7 +139,7 @@ module Kafka
       )
 
       if response != LibRdKafka::KafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR
-        raise "error"
+        raise Kafka::Error.new(response)
       end
     ensure
       if native_topic && !native_topic.null?
@@ -148,7 +148,7 @@ module Kafka
     end
 
     def each_batch(size : Int32, timeout_ms : Int32)
-      raise "Invalid configuration" unless config.values["enable.auto.offset.store"]? == "false"
+      raise Kafka::ConfigError.new("enable.auto.offset.store must be set to false") unless config.values["enable.auto.offset.store"]? == "false"
 
       messages = Array(Kafka::Message).new(size)
       start_time = Time.monotonic

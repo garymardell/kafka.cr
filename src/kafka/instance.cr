@@ -17,7 +17,7 @@ module Kafka
       @native_kafka = LibRdKafka.rd_kafka_new(native_type, @config.to_unsafe, error.to_unsafe, error.bytesize)
 
       if @native_kafka.null?
-        raise "Could not create kafka instance"
+        raise Kafka::Error.new(String.new(error))
       end
 
       @closed = false
@@ -36,12 +36,10 @@ module Kafka
 
     private def native_type
       case type
-      when Type::Consumer
+      in Type::Consumer
         LibRdKafka::KafkaType::RD_KAFKA_CONSUMER
-      when Type::Producer
+      in Type::Producer
         LibRdKafka::KafkaType::RD_KAFKA_PRODUCER
-      else
-        raise "Unsupported instance type"
       end
     end
   end
