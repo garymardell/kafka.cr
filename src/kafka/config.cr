@@ -10,7 +10,7 @@ module Kafka
         result = LibRdKafka.rd_kafka_conf_set(@native_config, key, value, error.to_unsafe, error.bytesize)
 
         if result != LibRdKafka::KafkaConfRes::RD_KAFKA_CONF_OK
-          raise "Error creating config"
+          raise Kafka::ConfigError.new(String.new(error))
         end
       end
     end

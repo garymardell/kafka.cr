@@ -9,4 +9,7 @@ module Kafka
 
   class ConnectionClosed < Exception
   end
+
+  class ConfigError < Exception
+  end
 end
