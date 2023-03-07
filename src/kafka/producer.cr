@@ -41,7 +41,7 @@ module Kafka
     end
 
     def produce(topic : String, payload : String, key : String = "", partition : Int32 = -1)
-      raise "Producer is shutting down" if closing?
+      check_closed_connection!
 
       native_topic = LibRdKafka.rd_kafka_topic_new(instance, topic, nil)
 
@@ -81,6 +81,12 @@ module Kafka
 
     def finalize
       close
+    end
+
+    macro check_closed_connection!
+      if closing?
+        raise Kafka::ConnectionClosed.new("Connection has been closed")
+      end
     end
   end
 end

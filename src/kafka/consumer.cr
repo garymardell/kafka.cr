@@ -32,10 +32,40 @@ module Kafka
       # Subscribe to topic partition list and check this was successful
       response = LibRdKafka.rd_kafka_subscribe(instance, tpl)
       if response != LibRdKafka::KafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR
-        raise Kafka::Error.new(response, "Error subscribing to '#{topics.join(", ")}'")
+        raise Kafka::Error.new(response)
       end
     ensure
       LibRdKafka.rd_kafka_topic_partition_list_destroy(tpl) unless tpl.nil?
+    end
+
+    def unsubscribe
+      check_closed_connection!
+
+      resposne = LibRdKafka.rd_kafka_unsubscribe(instance)
+      if response != LibRdKafka::KafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR
+        raise Kafka::Error.new(response)
+      end
+    end
+
+    # TODO: pause
+    # TODO: resume
+    # TODO: subscription
+    # TODO: assign
+    # TODO: assignment
+    # TODO: commited
+    # TODO: query_watermark_offsets
+    # TODO: lag
+
+    def cluster_id
+      check_closed_connection!
+
+      String.new(LibRdKafka.rd_kafka_clusterid(instance))
+    end
+
+    def member_id
+      check_closed_connection!
+
+      String.new(LibRdKafka.rd_kafka_memberid(instance))
     end
 
     def poll(timeout_ms : Int32)
@@ -92,6 +122,29 @@ module Kafka
       end
     end
 
+    def seek(message : Kafka::Message)
+      native_topic = LibRdKafka.rd_kafka_topic_new(
+        instance,
+        message.topic,
+        nil
+      )
+
+      response = LibRdKafka.rd_kafka_seek(
+        native_topic,
+        message.partition,
+        message.offset,
+        0 # timeout
+      )
+
+      if response != LibRdKafka::KafkaRespErr::RD_KAFKA_RESP_ERR_NO_ERROR
+        raise "error"
+      end
+    ensure
+      if native_topic && !native_topic.null?
+        LibRdKafka.rd_kafka_topic_destroy(native_topic)
+      end
+    end
+
     def each_batch(size : Int32, timeout_ms : Int32)
       raise "Invalid configuration" unless config.values["enable.auto.offset.store"]? == "false"
 
@@ -124,6 +177,12 @@ module Kafka
     end
 
     def finalize
+    end
+
+    macro check_closed_connection!
+      if closing?
+        raise Kafka::ConnectionClosed.new("Connection has been closed")
+      end
     end
   end
 end

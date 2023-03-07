@@ -191,6 +191,12 @@ lib LibRdKafka
     RD_KAFKA_VTYPE_HEADERS
   end
 
+  enum KafkaTimestampType
+    RD_KAFKA_TIMESTAMP_NOT_AVAILABLE
+    RD_KAFKA_TIMESTAMP_CREATE_TIME
+    RD_KAFKA_TIMESTAMP_LOG_APPEND_TIME
+  end
+
   struct KafkaVuMem
     ptr : Void*
     size : LibC::SizeT
@@ -291,13 +297,22 @@ lib LibRdKafka
   fun rd_kafka_topic_partition_list_destroy(rktparlist : KafkaTopicPartitionList*)
 
   fun rd_kafka_subscribe(rk : Kafka, topics : KafkaTopicPartitionList*) : KafkaRespErr
+  fun rd_kafka_unsubscribe(rk : Kafka) : KafkaRespErr
+
   fun rd_kafka_consumer_poll(rk : Kafka, timeout_ms : LibC::Int) : KafkaMessage*
   fun rd_kafka_message_destroy(rkm : KafkaMessage*)
-  fun rd_kafka_flush(rk : Kafka, timeout_ms : LibC::Int)
+  fun rd_kafka_flush(rk : Kafka, timeout_ms : LibC::Int) : KafkaRespErr
 
   fun rd_kafka_offset_store(rkt : KafkaTopic, partition : Int32, offset : Int64) : KafkaRespErr
+  fun rd_kafka_seek(rkt : KafkaTopic, partition : Int32, offset : Int64, timeout_ms : LibC::Int) : KafkaRespErr
+
+  fun rd_kafka_clusterid(rk : Kafka) : LibC::Char*
+  fun rd_kafka_memberid(rk : Kafka) : LibC::Char*
+
+  fun rd_kafka_message_timestamp(rkm : KafkaMessage*, tstype : KafkaTimestampType*) : Int64
 
   fun rd_kafka_last_error() : KafkaRespErr
+  fun rd_kafka_err2str(err : KafkaRespErr) : LibC::Char*
 
   fun rd_kafka_version : LibC::Int
   fun rd_kafka_version_str : LibC::Char*
