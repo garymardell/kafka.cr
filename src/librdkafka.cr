@@ -300,6 +300,7 @@ lib LibRdKafka
   fun rd_kafka_unsubscribe(rk : Kafka) : KafkaRespErr
 
   fun rd_kafka_consumer_poll(rk : Kafka, timeout_ms : LibC::Int) : KafkaMessage*
+  fun rd_kafka_consumer_close(rk : Kafka) : KafkaRespErr
   fun rd_kafka_message_destroy(rkm : KafkaMessage*)
   fun rd_kafka_flush(rk : Kafka, timeout_ms : LibC::Int) : KafkaRespErr
 

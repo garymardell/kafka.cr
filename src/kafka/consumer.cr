@@ -15,8 +15,10 @@ module Kafka
     end
 
     def close
-      @closing = true
+      return if closing?
 
+      @closing = true
+      LibRdKafka.rd_kafka_consumer_close(instance)
       instance.close
     end
 
@@ -177,6 +179,7 @@ module Kafka
     end
 
     def finalize
+      close
     end
 
     macro check_closed_connection!
